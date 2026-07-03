@@ -1,0 +1,32 @@
+{
+  "name": "@htmlshare/cli",
+  "version": "0.5.4",
+  "description": "Install the HTMLShare Skill for local AI coding agents.",
+  "type": "module",
+  "bin": {
+    "htmlshare": "bin/htmlshare.mjs"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "htmlshare",
+    "skill",
+    "codex",
+    "claude",
+    "cursor"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
