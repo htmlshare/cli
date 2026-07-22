@@ -1,6 +1,6 @@
 {
   "name": "@htmlshare/cli",
-  "version": "0.5.5",
+  "version": "1.0.0",
   "description": "Install the HTMLShare Skill for local AI coding agents.",
   "type": "module",
   "bin": {

@@ -13,10 +13,12 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const skillVersion = await readPackageVersion(scriptDir);
 const configPath = join(homedir(), ".htmlshare", "config.json");
 const cliCallbackPort = 38765;
-const htmlPath = process.argv[2];
+const args = process.argv.slice(2);
+const replaceTarget = readOption(args, "--replace") || readOption(args, "--project");
+const htmlPath = args.find((arg) => !arg.startsWith("-") && arg !== replaceTarget);
 
 if (!htmlPath) {
-  console.error("Usage: node scripts/publish-htmlshare.mjs path/to/index.html|project-dir");
+  console.error("Usage: node scripts/publish-htmlshare.mjs path/to/index.html|project-dir [--replace preview-url|slug|project-id]");
   process.exit(1);
 }
 
@@ -30,6 +32,16 @@ class HtmlShareApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+function readOption(args, name) {
+  const index = args.indexOf(name);
+  if (index === -1) return undefined;
+  const value = args[index + 1];
+  if (!value || value.startsWith("-")) {
+    throw new Error(`${name} requires a preview URL, slug, or project ID.`);
+  }
+  return value;
 }
 
 function contentTypeFor(path) {
@@ -341,6 +353,7 @@ async function publishHtml(accessToken, absolutePath) {
       name: basename(absolutePath),
       html,
       sourceType: "html",
+      ...(replaceTarget ? { replace: replaceTarget } : {}),
       ...(skillVersion ? { skillVersion } : {}),
     }),
   });
@@ -361,6 +374,7 @@ async function publishFiles(accessToken, root) {
       name: name ?? basename(root),
       files,
       sourceType: "files",
+      ...(replaceTarget ? { replace: replaceTarget } : {}),
       ...(skillVersion ? { skillVersion } : {}),
     }),
   });
@@ -404,7 +418,7 @@ try {
     url = await publish(token);
   }
 
-  console.log(`Published to HTMLShare:\n${url}`);
+  console.log(`${replaceTarget ? "Updated" : "Published"} to HTMLShare:\n${url}`);
 } catch (error) {
   console.error(error.message);
   process.exit(1);

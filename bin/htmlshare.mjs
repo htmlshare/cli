@@ -26,11 +26,13 @@ function usage() {
   return `Usage:
   htmlshare login
   htmlshare publish <path/to/index.html|project-dir>
+  htmlshare update <path/to/index.html|project-dir> --replace <preview-url|slug|project-id>
   htmlshare install [--agent codex|claude|cursor|all] [--dry-run]
 
 Examples:
   npx @htmlshare/cli login
   npx @htmlshare/cli publish ./dist
+  npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
   npx @htmlshare/cli install
   npx @htmlshare/cli install --agent codex
   npx @htmlshare/cli install --agent all`;
@@ -148,9 +150,13 @@ async function login() {
   console.log(`HTMLShare login saved to ${configPath}`);
 }
 
-function runPublisher(args) {
+function runPublisher(args, command = "publish") {
   if (!args[0]) {
-    throw new Error("publish requires a path.\n\nUsage: htmlshare publish <path/to/index.html|project-dir>");
+    throw new Error(`${command} requires a path.\n\nUsage: htmlshare ${command} <path/to/index.html|project-dir>${command === "update" ? " --replace <preview-url|slug|project-id>" : ""}`);
+  }
+
+  if (command === "update" && !args.includes("--replace") && !args.includes("--project")) {
+    throw new Error("update requires --replace <preview-url|slug|project-id>.");
   }
 
   const child = spawn(process.execPath, [publisherScript, ...args], { stdio: "inherit" });
@@ -182,6 +188,11 @@ async function main() {
 
   if (command === "publish") {
     runPublisher(args.slice(1));
+    return;
+  }
+
+  if (command === "update") {
+    runPublisher(args.slice(1), "update");
     return;
   }
 

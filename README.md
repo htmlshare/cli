@@ -14,6 +14,12 @@ Publish a local HTML file or static project directory:
 npx @htmlshare/cli publish ./dist
 ```
 
+Update an existing preview link in place:
+
+```bash
+npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
+```
+
 Install the HTMLShare Skill from the npm package contents:
 
 ```bash
