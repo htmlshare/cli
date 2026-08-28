@@ -1,6 +1,6 @@
 ---
 name: htmlshare
-description: Publish AI-generated HTML prototypes to HTMLShare and return a shareable preview URL. Use when the user asks to publish, upload, share, preview, or deploy an HTML page through HTMLShare.
+description: Publish AI-generated HTML prototypes to HTMLShare and return a shareable preview URL. Use when the user asks to publish, upload, share, preview, or deploy an HTML page through HTMLShare. Also handles custom subdomain publishing (e.g. "publish to demo.lanvo.app", "发布到 demo.lanvo.app", "deploy to myapp.lanvo.app").
 ---
 
 # HTMLShare
@@ -10,7 +10,11 @@ Use this skill to publish static HTML projects to HTMLShare.
 ## Workflow
 
 1. If the user has not provided an HTML, ZIP, or project directory path, find or create the static artifact first.
-2. Run the bundled publisher:
+2. If the user specifies a target domain — e.g. "publish to demo.lanvo.app", "发布到 demo.lanvo.app", "deploy to myapp.lanvo.app" — extract the hostname and pass it as `--domain`. Examples of user intent → flag mapping:
+   - "发布到 demo.lanvo.app" → `--domain demo.lanvo.app`
+   - "publish to myapp.lanvo.app" → `--domain myapp.lanvo.app`
+   - "deploy to lanvo subdomain demo" → `--domain demo.lanvo.app`
+3. Run the bundled publisher:
 
 ```bash
 node scripts/publish-htmlshare.mjs path/to/index.html

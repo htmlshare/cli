@@ -391,7 +391,7 @@ async function publishHtml(accessToken, absolutePath, replace) {
   });
 
   const result = await readJsonResponse(response, "HTMLShare upload failed.");
-  return { url: result.url, projectId: result.projectId };
+  return { url: result.url, projectId: result.projectId, clientUpdate: result.clientUpdate ?? null };
 }
 
 async function publishFiles(accessToken, root, replace) {
@@ -411,7 +411,7 @@ async function publishFiles(accessToken, root, replace) {
   });
 
   const result = await readJsonResponse(response, "HTMLShare upload failed.");
-  return { url: result.url, projectId: result.projectId };
+  return { url: result.url, projectId: result.projectId, clientUpdate: result.clientUpdate ?? null };
 }
 
 async function publish(accessToken, replace) {
@@ -447,7 +447,7 @@ async function run(accessToken) {
     }
   }
 
-  const { url, projectId } = await publish(accessToken, effectiveReplace);
+  const { url, projectId, clientUpdate } = await publish(accessToken, effectiveReplace);
 
   // If --domain given and we just created a new project, bind the label
   if (label && !existingDomain) {
@@ -460,7 +460,7 @@ async function run(accessToken) {
     }
   }
 
-  return { url, label, wasUpdate: Boolean(effectiveReplace) };
+  return { url, label, wasUpdate: Boolean(effectiveReplace), clientUpdate };
 }
 
 let token = await getAccessToken();
@@ -478,12 +478,16 @@ try {
     result = await run(token);
   }
 
-  const { url, label, wasUpdate } = result;
+  const { url, label, wasUpdate, clientUpdate } = result;
   const verb = wasUpdate ? "Updated" : "Published";
   if (label) {
     console.log(`${verb} to HTMLShare:\n${url}\nSubdomain: https://${label}.${lanvoBaseDomain}`);
   } else {
     console.log(`${verb} to HTMLShare:\n${url}`);
+  }
+
+  if (clientUpdate) {
+    console.log(`\nUpdate available: ${clientUpdate.version}\n${clientUpdate.notes}\nRun: ${clientUpdate.installCommand}`);
   }
 } catch (error) {
   console.error(error.message);
