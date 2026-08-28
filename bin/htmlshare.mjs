@@ -25,14 +25,16 @@ const agentTargets = {
 function usage() {
   return `Usage:
   htmlshare login
-  htmlshare publish <path/to/index.html|project-dir>
-  htmlshare update <path/to/index.html|project-dir> --replace <preview-url|slug|project-id>
+  htmlshare publish <path/to/index.html|project-dir> [--domain subdomain.lanvo.app]
+  htmlshare update <path/to/index.html|project-dir> --replace <preview-url|slug|project-id> [--domain subdomain.lanvo.app]
   htmlshare install [--agent codex|claude|cursor|all] [--dry-run]
 
 Examples:
   npx @htmlshare/cli login
   npx @htmlshare/cli publish ./dist
+  npx @htmlshare/cli publish ./dist --domain myapp.lanvo.app
   npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
+  npx @htmlshare/cli update ./dist --domain myapp.lanvo.app
   npx @htmlshare/cli install
   npx @htmlshare/cli install --agent codex
   npx @htmlshare/cli install --agent all`;
@@ -155,8 +157,8 @@ function runPublisher(args, command = "publish") {
     throw new Error(`${command} requires a path.\n\nUsage: htmlshare ${command} <path/to/index.html|project-dir>${command === "update" ? " --replace <preview-url|slug|project-id>" : ""}`);
   }
 
-  if (command === "update" && !args.includes("--replace") && !args.includes("--project")) {
-    throw new Error("update requires --replace <preview-url|slug|project-id>.");
+  if (command === "update" && !args.includes("--replace") && !args.includes("--project") && !args.includes("--domain")) {
+    throw new Error("update requires --replace <preview-url|slug|project-id> or --domain <subdomain.lanvo.app>.");
   }
 
   const child = spawn(process.execPath, [publisherScript, ...args], { stdio: "inherit" });

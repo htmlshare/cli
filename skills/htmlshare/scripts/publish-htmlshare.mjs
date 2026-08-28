@@ -9,13 +9,15 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const appUrl = (process.env.HTMLSHARE_BASE_URL || "https://www.htmlshare.page").replace(/\/$/, "");
+const lanvoBaseDomain = (process.env.LANVO_BASE_DOMAIN || "lanvo.app").replace(/^\./, "").toLowerCase();
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const skillVersion = await readPackageVersion(scriptDir);
 const configPath = join(homedir(), ".htmlshare", "config.json");
 const cliCallbackPort = 38765;
 const args = process.argv.slice(2);
 const replaceTarget = readOption(args, "--replace") || readOption(args, "--project");
-const htmlPath = args.find((arg) => !arg.startsWith("-") && arg !== replaceTarget);
+const domainTarget = readOption(args, "--domain");
+const htmlPath = args.find((arg) => !arg.startsWith("-") && arg !== replaceTarget && arg !== domainTarget);
 
 if (!htmlPath) {
   console.error("Usage: node scripts/publish-htmlshare.mjs path/to/index.html|project-dir [--replace preview-url|slug|project-id]");
@@ -344,7 +346,37 @@ function isAuthorizationError(error) {
   );
 }
 
-async function publishHtml(accessToken, absolutePath) {
+function extractLanvoLabel(hostname) {
+  const normalized = hostname.trim().toLowerCase();
+  const suffix = `.${lanvoBaseDomain}`;
+  if (normalized.endsWith(suffix)) {
+    return normalized.slice(0, normalized.length - suffix.length);
+  }
+  if (!normalized.includes(".")) {
+    return normalized;
+  }
+  throw new Error(`Unrecognized domain format "${hostname}". Use a subdomain like "myapp.${lanvoBaseDomain}".`);
+}
+
+async function lookupDomain(accessToken, label) {
+  const response = await fetch(`${appUrl}/api/cli/domains?label=${encodeURIComponent(label)}`, {
+    headers: requestHeaders(accessToken),
+  });
+  const result = await readJsonResponse(response, "Domain lookup failed.");
+  return result.domain ?? null;
+}
+
+async function bindDomain(accessToken, projectId, label) {
+  const response = await fetch(`${appUrl}/api/cli/domains`, {
+    method: "POST",
+    headers: requestHeaders(accessToken),
+    body: JSON.stringify({ projectId, label }),
+  });
+  const result = await readJsonResponse(response, "Domain binding failed.");
+  return result.domain;
+}
+
+async function publishHtml(accessToken, absolutePath, replace) {
   const html = await readFile(absolutePath, "utf8");
   const response = await fetch(`${appUrl}/api/skill/publish`, {
     method: "POST",
@@ -353,17 +385,16 @@ async function publishHtml(accessToken, absolutePath) {
       name: basename(absolutePath),
       html,
       sourceType: "html",
-      ...(replaceTarget ? { replace: replaceTarget } : {}),
+      ...(replace ? { replace } : {}),
       ...(skillVersion ? { skillVersion } : {}),
     }),
   });
 
   const result = await readJsonResponse(response, "HTMLShare upload failed.");
-
-  return result.url;
+  return { url: result.url, projectId: result.projectId };
 }
 
-async function publishFiles(accessToken, root) {
+async function publishFiles(accessToken, root, replace) {
   const files = await collectFiles(root);
   const entry = files.find((file) => file.path === "index.html");
   const name = entry ? htmlTitle(Buffer.from(entry.contentBase64, "base64").toString("utf8")) : undefined;
@@ -374,22 +405,21 @@ async function publishFiles(accessToken, root) {
       name: name ?? basename(root),
       files,
       sourceType: "files",
-      ...(replaceTarget ? { replace: replaceTarget } : {}),
+      ...(replace ? { replace } : {}),
       ...(skillVersion ? { skillVersion } : {}),
     }),
   });
 
   const result = await readJsonResponse(response, "HTMLShare upload failed.");
-
-  return result.url;
+  return { url: result.url, projectId: result.projectId };
 }
 
-async function publish(accessToken) {
+async function publish(accessToken, replace) {
   const absolutePath = resolve(htmlPath);
   const inputStat = await stat(absolutePath);
 
   if (inputStat.isDirectory()) {
-    return publishFiles(accessToken, absolutePath);
+    return publishFiles(accessToken, absolutePath, replace);
   }
 
   if (absolutePath.toLowerCase().endsWith(".zip")) {
@@ -397,28 +427,64 @@ async function publish(accessToken) {
   }
 
   if (basename(absolutePath).toLowerCase() === "index.html") {
-    return publishFiles(accessToken, dirname(absolutePath));
+    return publishFiles(accessToken, dirname(absolutePath), replace);
   }
 
-  return publishHtml(accessToken, absolutePath);
+  return publishHtml(accessToken, absolutePath, replace);
+}
+
+async function run(accessToken) {
+  const label = domainTarget ? extractLanvoLabel(domainTarget) : null;
+
+  // If --domain given, check if the label is already bound to this user's project
+  let existingDomain = null;
+  let effectiveReplace = replaceTarget;
+
+  if (label) {
+    existingDomain = await lookupDomain(accessToken, label);
+    if (existingDomain && !replaceTarget) {
+      effectiveReplace = existingDomain.projectId;
+    }
+  }
+
+  const { url, projectId } = await publish(accessToken, effectiveReplace);
+
+  // If --domain given and we just created a new project, bind the label
+  if (label && !existingDomain) {
+    try {
+      await bindDomain(accessToken, projectId, label);
+    } catch (bindError) {
+      // Publish succeeded — show the URL before surfacing the bind error
+      console.log(`${effectiveReplace ? "Updated" : "Published"} to HTMLShare:\n${url}`);
+      throw bindError;
+    }
+  }
+
+  return { url, label, wasUpdate: Boolean(effectiveReplace) };
 }
 
 let token = await getAccessToken();
 
 try {
-  let url;
+  let result;
   try {
-    url = await publish(token);
+    result = await run(token);
   } catch (error) {
     if (!isAuthorizationError(error)) throw error;
 
     console.error("HTMLShare authorization expired or was revoked. Opening login to reconnect...");
     await clearConfig();
     token = await authorize();
-    url = await publish(token);
+    result = await run(token);
   }
 
-  console.log(`${replaceTarget ? "Updated" : "Published"} to HTMLShare:\n${url}`);
+  const { url, label, wasUpdate } = result;
+  const verb = wasUpdate ? "Updated" : "Published";
+  if (label) {
+    console.log(`${verb} to HTMLShare:\n${url}\nSubdomain: https://${label}.${lanvoBaseDomain}`);
+  } else {
+    console.log(`${verb} to HTMLShare:\n${url}`);
+  }
 } catch (error) {
   console.error(error.message);
   process.exit(1);

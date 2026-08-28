@@ -20,6 +20,14 @@ Update an existing preview link in place:
 npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
 ```
 
+Publish to a custom Lanvo subdomain (requires a paid plan or free trial):
+
+```bash
+npx @htmlshare/cli publish ./dist --domain myapp.lanvo.app
+```
+
+If the subdomain is already linked to a project you own, the project is updated in place. Otherwise a new project is published and the subdomain is bound to it.
+
 Install the HTMLShare Skill from the npm package contents:
 
 ```bash
