@@ -17,7 +17,7 @@ npx @htmlshare/cli publish ./dist
 Update an existing preview link in place:
 
 ```bash
-npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
+npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.dev/abc123/index.html
 ```
 
 Publish to a custom Lanvo subdomain (requires a paid plan or free trial):

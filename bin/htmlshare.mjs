@@ -33,7 +33,7 @@ Examples:
   npx @htmlshare/cli login
   npx @htmlshare/cli publish ./dist
   npx @htmlshare/cli publish ./dist --domain myapp.lanvo.app
-  npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.page/abc123/index.html
+  npx @htmlshare/cli update ./dist --replace https://preview.htmlshare.dev/abc123/index.html
   npx @htmlshare/cli update ./dist --domain myapp.lanvo.app
   npx @htmlshare/cli install
   npx @htmlshare/cli install --agent codex

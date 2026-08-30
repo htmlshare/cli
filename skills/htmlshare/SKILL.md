@@ -29,7 +29,7 @@ node scripts/publish-htmlshare.mjs path/to/project-dir
 To update an existing preview link in place, pass the current preview URL, slug, or project ID:
 
 ```bash
-node scripts/publish-htmlshare.mjs path/to/project-dir --replace https://preview.htmlshare.page/abc123/index.html
+node scripts/publish-htmlshare.mjs path/to/project-dir --replace https://preview.htmlshare.dev/abc123/index.html
 ```
 
 To publish to a custom Lanvo subdomain (requires a paid plan or free trial):
