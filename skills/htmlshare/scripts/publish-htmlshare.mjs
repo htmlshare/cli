@@ -128,7 +128,9 @@ try {
   }
 
   if (clientUpdate) {
-    console.log(`\nUpdate available: ${clientUpdate.version}\n${clientUpdate.notes}\nRun: ${clientUpdate.installCommand}`);
+    console.log(`\nA newer HTMLShare Skill is available (${clientUpdate.version}).`);
+    console.log(clientUpdate.notes);
+    console.log(`Install it with:\n  ${clientUpdate.installCommand}`);
   }
 } catch (error) {
   console.error(error.message);

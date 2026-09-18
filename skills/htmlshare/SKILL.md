@@ -62,3 +62,40 @@ If the subdomain is already linked to a project you own, this automatically upda
   - `domain_plan_required` (403): subdomain binding requires upgrading at `https://www.htmlshare.page/pricing` or using the free trial.
   - `domain_limit_reached` (403): you have reached the subdomain limit for your plan.
 - If a `--domain` bind fails after a successful publish, the published URL is printed before the error so the content is not lost.
+
+## JSON state for prototypes
+
+HTMLShare is still static hosting. Signed-in projects can persist one JSON object/array (max 64KB) so a demo can survive a phone switch. This is not a database. If the user wants remote demo state, put the `fetch` calls below in the published HTML; do not add a custom backend.
+
+**Per-project blob** (Free/Pro/Max, not Guest):
+
+```js
+const state = await fetch("/__htmlshare/state").then((response) => response.json());
+await fetch("/__htmlshare/state", {
+  method: "PUT",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ ...state, step: 2 }),
+});
+```
+
+Use a leading `/`. Empty state is `{}`. Last write wins. Re-publishing HTML keeps the blob; deleting or expiring the project deletes it. Custom Lanvo domains can use the same per-project blob. A page must not read or write another project's `/__htmlshare/state`.
+
+**User blob** (Pro/Max only, only on `preview.htmlshare.dev`):
+
+```js
+const token = document.querySelector('meta[name="htmlshare-user-state"]')?.content;
+if (!token) throw new Error("User state is not available on this preview.");
+const shared = await fetch("/__htmlshare/user-state", {
+  headers: { Authorization: `Bearer ${token}` },
+}).then((response) => response.json());
+await fetch("/__htmlshare/user-state", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({ ...shared, theme: "dark" }),
+});
+```
+
+Anyone who opens any of the owner's preview links can read that meta token and therefore the user blob. Guest previews and Lanvo hosts do not have user-state. Do not use cookies. Do not treat this as auth or a backend.
